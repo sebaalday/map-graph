@@ -30,59 +30,42 @@ from datetime import datetime as dt
 # from pyproj import Proj, transform
 
 # App initialize - GitHub
-#app = dash.Dash(__name__, 
-#                meta_tags=[
-#                        {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
-#                ]
-# )
-#
-#server = app.server # verificar
+app = dash.Dash(__name__, 
+                meta_tags=[
+                        {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
+                ]
+ )
+
+server = app.server # verificar
 
 # App initialize - Local server
-app_nivel3 = dash.Dash(
-        __name__
-)
-app_nivel3.scripts.config.serve_locally = True
-
-app_nivel3.title = 'Pozos Pampa del Tamarugal'
-app_nivel3.config["suppress_callback_exceptions"] = True
+#app_nivel3 = dash.Dash(
+#        __name__
+#)
+#app_nivel3.scripts.config.serve_locally = True
+#
+app.title = 'Pozos Pampa del Tamarugal'
+app.config["suppress_callback_exceptions"] = True
 
 
 # Mapbox
 mapbox_access_token = 'pk.eyJ1Ijoic2ViYXN0aWFuLWFsZGF5IiwiYSI6ImNrMzdiZ3k3bDA4aWgzY296OG5qaGducW8ifQ.hXk2h8e096wrwNWaaLrjTQ'
 
 # Load data - Local Server
-df = pd.read_csv('data/niveles_acl.csv',low_memory=False) # Base de datos niveles
-coord = pd.read_csv('data/pozos_coord.csv',low_memory=False) # Ubicacion de pozos
+#df = pd.read_csv('data/niveles_acl.csv',low_memory=False) # Base de datos niveles
+#coord = pd.read_csv('data/pozos_coord.csv',low_memory=False) # Ubicacion de pozos
 
 # Load data - GitHub
-#APP_PATH = str(pathlib.Path(__file__).parent.resolve())
-#df = pd.read_csv(os.path.join(APP_PATH, os.path.join("data", "niveles_acl.csv")))
-#coord = pd.read_csv(
-#    os.path.join(APP_PATH, os.path.join("data", "pozos_coord_git.csv"))
-#)
+APP_PATH = str(pathlib.Path(__file__).parent.resolve())
+df = pd.read_csv(os.path.join(APP_PATH, os.path.join("data", "niveles_acl.csv")))
+coord = pd.read_csv(
+    os.path.join(APP_PATH, os.path.join("data", "pozos_coord.csv"))
+)
 
 # Ordenar datos. Pasar fecha en formato string a formato fecha.
 df['Fecha'] = pd.to_datetime(df['Fecha'])
 # Cambio coordenadas
 coord['Latitude'], coord['Longitude'] = utm.to_latlon(coord['E'], coord['N'], 19, 'J') #transform(inProj, outProj, coord['E'].tolist(), coord['N'].tolist())
-
-## Colors for legend - Local Server
-#colors = [
-#    "#001f3f",
-#    "#0074d9",
-#    "#3d9970",
-#    "#111111",
-#    "#01ff70",
-#    "#ffdc00",
-#    "#ff851B",
-#    "#ff4136",
-#    "#85144b",
-#    "#f012be",
-#    "#b10dc9",
-#    "#AAAAAA",
-#    "#111111",
-#]
 
 # Assign color to legend - Github    
 colormap = {}
@@ -196,10 +179,7 @@ def generate_well_map(dff, selected_data, style):
             lat=dff[dff["Tipo"] == tipo]["Latitude"],
             lon=dff[dff["Tipo"] == tipo]["Longitude"],
             mode="markers",
-# GitHub
             marker={"color": colormap[tipo], "size": 9},
-# Local Server
-#            marker={"color": colormap[0], "size": 9},
             text=text_list,
             name=tipo,
             selectedpoints=selected_index,
@@ -210,7 +190,7 @@ def generate_well_map(dff, selected_data, style):
     return {"data": data, "layout": layout}
 
 # Layout de la app
-app_nivel3.layout = html.Div(
+app.layout = html.Div(
     children=[
         html.Div(
             id="top-row",
@@ -232,7 +212,20 @@ app_nivel3.layout = html.Div(
                                     "regions can be selected by holding the SHIFT key while clicking and "
                                     "dragging.",
                                 ),
-                                build_graph_title("Select Operator"),
+                                build_graph_title("Tipo de Pozo"),
+                                dcc.Dropdown(
+                                    id="type-select",
+                                    options=[
+                                        {"label": i, "value": i}
+                                        for i in coord["Tipo"].unique().tolist()
+                                    ],
+                                    multi=True,
+                                    value=[
+                                        coord["Tipo"].unique().tolist()[0],
+                                        coord["Tipo"].unique().tolist()[1],
+                                    ],
+                                ),
+                                build_graph_title("Seleccionar Operador"),
                                 dcc.Dropdown(
                                     id="operator-select",
                                     options=[
@@ -274,52 +267,35 @@ app_nivel3.layout = html.Div(
                     className="row",
                     id="top-row-graphs",
                     children=[
-#                        # Well map
-#                        html.Div(
-#                            id="well-map-container",
-#                            children=[
-#                                build_graph_title("Well Map"),
-#                                dcc.RadioItems(
-#                                    id="mapbox-view-selector",
-#                                    options=[
-#                                        {"label": "basic", "value": "basic"},
-#                                        {"label": "satellite", "value": "satellite"},
-#                                        {"label": "outdoors", "value": "outdoors"},
-#                                        {
-#                                            "label": "satellite-street",
-#                                            "value": "mapbox://styles/mapbox/satellite-streets-v9",
-#                                        },
-#                                    ],
-#                                    value="basic",
-#                                ),
-#                                dcc.Graph(
-#                                    id="well-map",
-#                                    figure={
-#                                        "layout": {
-#                                            "paper_bgcolor": "#192444",
-#                                            "plot_bgcolor": "#192444",
-#                                        }
-#                                    },
-#                                    config={"scrollZoom": True, "displayModeBar": True},
-#                                ),
-#                            ],
-#                        ),
+                        # Well map
                         html.Div(
-                                # Selected well productions
-                                id="graph-container-1",
-                                children=[
-                                        html.Div(
-                                                id="graph-header-1",
-                                                children=[
-                                                        build_graph_title(
-                                                                "Niveles piezométricos"
-                                                                ),
-                                                ],
-                                        ),
-                                        dcc.Graph(
-                                                id="graf-nivel-01-1"
-                                        ),
-                                ],
+                            id="well-map-container",
+                            children=[
+                                build_graph_title("Mapa de Pozos"),
+                                dcc.RadioItems(
+                                    id="mapbox-view-selector",
+                                    options=[
+                                        {"label": "basic", "value": "basic"},
+                                        {"label": "satellite", "value": "satellite"},
+                                        {"label": "outdoors", "value": "outdoors"},
+                                        {
+                                            "label": "satellite-street",
+                                            "value": "mapbox://styles/mapbox/satellite-streets-v9",
+                                        },
+                                    ],
+                                    value="basic",
+                                ),
+                                dcc.Graph(
+                                    id="well-map",
+                                    figure={
+                                        "layout": {
+                                            "paper_bgcolor": "#192444",
+                                            "plot_bgcolor": "#192444",
+                                        }
+                                    },
+                                    config={"scrollZoom": True, "displayModeBar": True},
+                                ),
+                            ],
                         ),
                         # Ternary map
 #                        html.Div(
@@ -370,36 +346,36 @@ app_nivel3.layout = html.Div(
             className="row",
             id="bottom-row",
             children=[
-                # Well map
-                html.Div(
-                        id="well-map-container",
-                        children=[
-                            build_graph_title("Well Map"),
-                            dcc.RadioItems(
-                                id="mapbox-view-selector",
-                                options=[
-                                    {"label": "basic", "value": "basic"},
-                                    {"label": "satellite", "value": "satellite"},
-                                    {"label": "outdoors", "value": "outdoors"},
-                                    {
-                                        "label": "satellite-street",
-                                        "value": "mapbox://styles/mapbox/satellite-streets-v9",
-                                    },
-                                ],
-                                value="basic",
-                            ),
-                            dcc.Graph(
-                                id="well-map",
-                                figure={
-                                    "layout": {
-                                        "paper_bgcolor": "#192444",
-                                        "plot_bgcolor": "#192444",
-                                    }
-                                },
-                                config={"scrollZoom": True, "displayModeBar": True},
-                            ),
-                        ],
-                    ),
+#                # Well map
+#                html.Div(
+#                        id="well-map-container",
+#                        children=[
+#                            build_graph_title("Well Map"),
+#                            dcc.RadioItems(
+#                                id="mapbox-view-selector",
+#                                options=[
+#                                    {"label": "basic", "value": "basic"},
+#                                    {"label": "satellite", "value": "satellite"},
+#                                    {"label": "outdoors", "value": "outdoors"},
+#                                    {
+#                                        "label": "satellite-street",
+#                                        "value": "mapbox://styles/mapbox/satellite-streets-v9",
+#                                    },
+#                                ],
+#                                value="basic",
+#                            ),
+#                            dcc.Graph(
+#                                id="well-map",
+#                                figure={
+#                                    "layout": {
+#                                        "paper_bgcolor": "#192444",
+#                                        "plot_bgcolor": "#192444",
+#                                    }
+#                                },
+#                                config={"scrollZoom": True, "displayModeBar": True},
+#                            ),
+#                        ],
+#                    ),
                 # Formation bar plots
 #                html.Div(
 #                    id="form-bar-container",
@@ -431,239 +407,6 @@ app_nivel3.layout = html.Div(
     ]
 )
                 
-                # Graph
-#                        html.Div(
-#                            id="graph-container",
-#                            children=[
-#                                    html.Div(
-#                                    id="graph-header",
-#                                    children=[
-#                                        build_graph_title(
-#                                            "Niveles piezométricos"
-#                                        ),
-#                                    ],
-#                                    ),
-#                            dcc.Graph(
-#                                    id="graf-nivel-01"
-#                                    ),
-#app.layout = html.Div(
-#    children=[
-#        html.Div(
-#            id="top-row",
-#            children=[
-#                html.Div(
-#                    className="row",
-#                    id="top-row-header",
-#                    children=[
-#                        html.Div(
-#                            id="header-container",
-#                            children=[
-#                                build_banner(),
-#                                html.P(
-#                                    id="instructions",
-#                                    children="Visualizador de niveles Pampa del Tamarugal. Seleccione de la barra "
-#                                    "el pozo que desea ver. Puede seleccionar una region con la herramienta lazo",
-#                                ),
-#                                build_graph_title("Selección de pozos"),
-#                                dcc.Dropdown(
-#                                    id="pozo-monitoreo-in",
-#                                    options=[
-#                                        {"label": val, "value": val}
-#                                        for val in df["Pozo"].unique().tolist()
-#                                    ],
-#                                    multi=True,
-#                                    value=[
-#                                        df["Pozo"].unique().tolist()[0],
-#                                        df["Pozo"].unique().tolist()[1],
-#                                    ],
-#                                ),
-#                                dcc.DatePickerRange(
-#                                    id='date-picker-range',
-#                                    min_date_allowed=dt(1900, 1, 1),
-#                                    max_date_allowed=dt.now(),
-#                                    display_format='DD/MM/YYYY',
-#                                    start_date=dt(1980,1, 1),
-#                                    end_date=dt.now()
-#                                ),
-#                            ],
-#                        ),
-#                    ],
-#                ),
-#                html.Div(
-#                    className="row",
-#                    id="top-row-graphs",
-#                    children=[
-#                        # Well map
-#                        html.Div(
-#                            id="well-map-container",
-#                            children=[
-#                                build_graph_title("Well Map"),
-#                                dcc.RadioItems(
-#                                    id="mapbox-view-selector",
-#                                    options=[
-#                                        {"label": "basic", "value": "basic"},
-#                                        {"label": "satellite", "value": "satellite"},
-#                                        {"label": "outdoors", "value": "outdoors"},
-#                                        {
-#                                            "label": "satellite-street",
-#                                            "value": "mapbox://styles/mapbox/satellite-streets-v9",
-#                                        },
-#                                    ],
-#                                    value="basic",
-#                                ),
-#                                dcc.Graph(
-#                                    id="well-map",
-#                                    figure={
-#                                        "layout": {
-#                                            "paper_bgcolor": "#192444",
-#                                            "plot_bgcolor": "#192444",
-#                                        }
-#                                    },
-#                                    config={"scrollZoom": True, "displayModeBar": True},
-#                                ),
-#                            ],
-#                        ),
-#                        # Graph
-#                        html.Div(
-#                            id="graph-container",
-#                            children=[
-#                                    html.Div(
-#                                    id="graph-header",
-#                                    children=[
-#                                        build_graph_title(
-#                                            "Niveles piezométricos"
-#                                        ),
-#                                    ],
-#                                    ),
-#                            dcc.Graph(
-#                                    id="graf-nivel-01"
-#                                    ),
-#                            ],
-#                        ),
-#                    ],
-#                ),
-#            ],
-#        ),
-#    ],
-#)
-
-
-#app.layout = html.Div(
-#        
-#        html.Div([
-#                html.Div(
-#            [
-#                html.H1(children='Niveles y Ubicación de Pozos',
-#                        className='nine columns'),
-#                html.Img(
-#                    src="https://www.arcadis.com/images/arcadis-logo.png?v=20191028095144",
-#                    className='three columns',
-#                    style={
-#                        'height': '16%',
-#                        'width': '16%',
-#                        'float': 'right',
-#                        'position': 'relative',
-#                        'padding-top': 12,
-#                        'padding-right': 0
-#                    },
-#                ),
-#                html.Div(children='''
-#                        Visualizador de los niveles de pozos Pampa del Tamarugal.
-#                        ''',
-#                        className='nine columns'
-#                )
-#            ], className="row"
-#        ),
-#        
-#        # Selectors
-#        html.Div(
-#            [
-#                html.Div(
-#                    [
-#                        html.Label('Pozo'),
-#                        dcc.Dropdown(
-#                                id='pozo-monitoreo-in',
-#                                options=[{'label':val, 'value':val} for val in df.Pozo.unique()],
-#                                value=['SNGM-PTA-0001'],
-#                                multi=True
-#                        ),
-#                    ],
-#                    className='six columns',
-#                    style={'margin-top': '10'}
-#                ),
-#                html.Div(
-#                    [
-#                        dcc.DatePickerRange(
-#                                id='date-picker-range',
-#                                min_date_allowed=dt(1900, 1, 1),
-#                                max_date_allowed=dt.now(),
-#                                display_format='DD/MM/YYYY',
-#                                start_date=dt(1980,1, 1),
-#                                end_date=dt.now()
-#                        )
-#                    ],
-#                    className='six columns',
-#                    style={'margin-top': '10'}
-#                )
-#            ],
-#            className='row'
-#        ),
-#        # Map + Graph
-#        html.Div(
-#            [
-#                html.Div(
-#                    className="row",
-#                    id="top-row-graphs",
-#                    children=[
-#                        # Well map
-#                        html.Div(
-#                                id = "well-map-container",
-#                                children = [
-#                                        build_graph_title("Mapa de pozos"),
-#                                        dcc.RadioItems(
-#                                                id="mapbox-view-selector",
-#                                                options=[
-#                                                        {"label": "basic", "value":"basic"},
-#                                                        {"label": "satellite", "value":"satellite"},
-#                                                        {"label": "outdoors", "value":"outdoors"},
-#                                                        {
-#                                                                "label": "satellite-street",
-#                                                                "value": "mapbox://styles/mapbox/satellite-streets-v9",
-#                                                        },
-#                                                ],
-#                                                value="basic",
-#                                        ),                  
-#                                        dcc.Graph(
-#                                                id="well-map",
-#                                                figure={
-#                                                     "layout": {
-#                                                             "paper_bgcolor": "#192444",
-#                                                             "plot_bgcolor": "#192444",
-#                                                     }
-#                                                },
-#                                                config={"scrollZoom": True, "displayModeBar": True},
-#                                        ),
-#                                ],
-#                                #className="six columns"
-#                        ),
-#                html.Div(
-#                    [
-#                        dcc.Graph(id='graf-nivel-01'),
-#                    ],
-#                    #className="six columns"
-#                ),
-#                html.Div(
-#                    [
-#                        html.P('Developed by Sebastián Alday - ', style = {'display': 'inline'}),
-#                        html.A('sebastian.alday@arcadis.com', href = 'mailto:sebastian.alday@arcadis.com, sebastian.alday@ug.uchile.cl')
-#                    ], className = "twelve columns",
-#                       style = {'fontSize': 18, 'padding-top': 20}
-#                )
-#            ], #className="row"
-#        )
-#    ], className='ten columns offset-by-one')
-#    ]))
-
 # Funcion para crear mapa
 #@app.callback(
 #    Output('map-graph', 'figure'),
@@ -680,20 +423,23 @@ app_nivel3.layout = html.Div(
 #    return gen_map(traces)
 
 # Update well map
-@app_nivel3.callback(
+@app.callback(
     Output("well-map", "figure"),
     [
 #        Input("ternary-map", "selectedData"),
 #        Input("form-by-bar", "selectedData"),
 #        Input("form-by-bar", "clickData"),
+        Input("type-select", "value"),
+        Input("operator-select", "value"),
         Input("pozo-monitoreo-in", "value"),
         Input("mapbox-view-selector", "value"),
     ],
 )
 def update_well_map(
-    pozo_select, mapbox_view
+    tipo_select, op_select, pozo_select, mapbox_view
 ):
-    dff = coord[coord["Pozo"].isin(pozo_select)]
+#    dff_T = coord[coord["Tipo"].isin(tipo_select)]
+    dff_P = coord[coord["Pozo"].isin(pozo_select)]
     tipos = coord["Tipo"].unique().tolist()
 
     # Find which one has been triggered
@@ -737,11 +483,11 @@ def update_well_map(
 #        for tipo in tipos:
 #            processed_data[tipo] = None
 
-    return generate_well_map(dff, processed_data, mapbox_view)
+    return generate_well_map(dff_P, processed_data, mapbox_view)
 
 
 # Funcion para crear grafico
-@app_nivel3.callback(
+@app.callback(
      Output('graf-nivel-01', 'figure'),
      [Input('pozo-monitoreo-in', 'value'),
       Input('date-picker-range','start_date'),
@@ -792,58 +538,7 @@ def update_figure(puntos_muestreo_selected,s_date,e_date):
             )
         }
 
-# Funcion para crear grafico
-@app_nivel3.callback(
-     Output('graf-nivel-01-1', 'figure'),
-     [Input('pozo-monitoreo-in', 'value'),
-      Input('date-picker-range','start_date'),
-      Input('date-picker-range','end_date')])
-def update_figure_1(puntos_muestreo_selected,s_date,e_date):
-    traces = []
-    #Continuar desde aca
-    for i,val_selected in enumerate(puntos_muestreo_selected):
-        df_filtered = df[(df['Pozo'] == val_selected)].copy()
-        df_filtered=df_filtered.sort_values(by='Fecha').reset_index(drop=True)
-        x1=df_filtered['Fecha']
-        y1=df_filtered['Nivel']
-#        pos_nan=np.where(np.isnan(y1.values))          
-#        x2=x1[pos_nan].copy()
-#        y2=np.zeros(x2.shape)            
-        traces.append(go.Scatter(
-            x=x1,
-            y=y1,
-            mode='markers',
-            opacity=0.7,
-            marker={
-                'size': 8,
-                'line': {'width': 0.5, 'color': 'white'}
-            },
-            name=val_selected
-        ))
-    if len(traces)==0:
-        traces.append(go.Scatter(
-            x=np.array([s_date,e_date]),
-            y=np.nan*np.array([0,0]),
-            mode='markers',
-            opacity=0.7,
-            marker={
-                'size': 8,
-                'line': {'width': 0.5, 'color': 'white'}
-            },
-            name='Sin pozo'
-        ))
-        
-    return {
-            'data': traces,
-            'layout': go.Layout(
-                xaxis={'range': [s_date,e_date]},
-                yaxis={'title': 'Nivel (msnm)'},
-#                margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
-                legend={'x': 0, 'y': 1},
-                hovermode='closest'
-            )
-        }
- 
+
 
 if __name__ == '__main__':
-    app_nivel3.run_server(debug=True)
+    app.run_server(debug=True)
